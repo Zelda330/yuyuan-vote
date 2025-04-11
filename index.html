@@ -193,24 +193,6 @@
       font-size: 14px;
     }
 
-    /* 音乐按钮样式 */
-    #musicButton {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background-color: rgba(255, 255, 255, 0.8);
-      color: #795548;
-      border: 1px solid #795548;
-      padding: 10px;
-      border-radius: 50%;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    #musicButton:hover {
-      transform: scale(1.1);
-    }
-
     /* 信息部分样式 */
     .info-section {
       margin-top: 20px;
@@ -233,36 +215,7 @@
       margin-bottom: 5px;
       font-weight: bold;
     }
-
-    /* 书法块样式 */
-    .calligraphy-block {
-      width: 150px;
-      height: 80px;
-    }
-  </style>
-</head>
-
-<body>
-  <div class="container">
-    <div class="header">
-      <h1 class="title">芋圆大名投票</h1>
-      <p class="subtitle">请勾选出3个您最喜欢的姓名</p>
-    </div>
-    <div class="main">
-      <div id="nameOptions"></div>
-      <button id="submitButton">投票</button>
-      <div id="resultSection">
-        <h2 class="section-title">实时投票结果</h2>
-        <div id="barChart"></div>
-      </div>
-    </div>
-    <button id="musicButton">
-      <i class="fa-solid fa-music"></i>
-    </button>
-  </div>
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js"></script>
-  <script>
+ 
     // Firebase 配置
     const firebaseConfig = {
       apiKey: "AIzaSyBXU75YJBs5iV8RBncXZ0Q0Be4nKGMJVYI",
