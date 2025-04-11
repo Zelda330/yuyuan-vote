@@ -1,275 +1,269 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
-  <title>芋圆大名投票</title>
-  <style>
-    /* 引入字体 */
-    @font-face {
-      font-family: 'KaiTi';
-      src: url('https://fonts.googleapis.com/css2?family=KaiTi&display=swap');
-    }
+    <meta charset="UTF-8">
+    <title>芋圆大名投票</title>
+    <style>
+        :root {
+            --primary-color: #D32F2F;
+            --background: #FFF8E1;
+        }
+        body {
+            background: var(--background);
+            margin: 0;
+            font-family: "Microsoft YaHei";
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.5em;
+            margin: 0.5em 0;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.2em;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .option-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .option-item:hover {
+            border-color: var(--primary-color);
+        }
+        .option-item.selected {
+            background: #FFEBEE;
+            border-color: var(--primary-color);
+        }
+        input[type="checkbox"] {
+            margin-right: 12px;
+            transform: scale(1.2);
+        }
+        .vote-button {
+            display: block;
+            width: 200px;
+            margin: 25px auto;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+        .results-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        /* 详细信息模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            position: relative;
+            background: white;
+            margin: 5% auto;
+            padding: 25px;
+            width: 70%;
+            max-width: 600px;
+            border-radius: 12px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .close-btn {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            font-size: 1.5em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>芋圆大名投票</h1>
+            <p class="subtitle">请选择3个您最喜欢的名字并点击下方投票按钮</p>
+        </header>
+        
+        <div class="options-grid" id="optionsContainer"></div>
+        
+        <button class="vote-button" id="submitBtn">投票</button>
+        
+        <div class="results-section">
+            <h3>实时投票结果</h3>
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
 
-    /* 全局样式 */
-    body {
-      font-family: 'KaiTi', serif;
-      background-color: #f5f5dc;
-      color: #333;
-      margin: 0;
-      padding: 0;
-      position: relative;
-    }
+    <!-- 详细信息模态框 -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
 
-    /* 头部样式 */
-    .header {
-      text-align: center;
-      padding: 40px 0;
-      position: relative;
-    }
+    <!-- Firebase 配置 -->
+    <script type="module">
+        // 替换为您的Firebase配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXU75YJBs5iV8RBncXZ0Q0Be4nKGMJVYI",
+            authDomain: "yuyuan-vote.firebaseapp.com",
+            databaseURL: "https://yuyuan-vote-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "yuyuan-vote",
+            storageBucket: "yuyuan-vote.firebasestorage.app",
+            messagingSenderId: "16803060355",
+            appId: "1:16803060355:web:ca4f659f04b72a9cda59b6"
+        };
 
-    /* 调小标题和副标题字号 */
-   .title {
-      font-size: 40px;
-      margin-bottom: 10px;
-      color: #5d4037;
-      font-weight: bold;
-    }
+        // 初始化Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js";
+        import { getDatabase, ref, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/9.0.2/firebase-database.js";
 
-   .subtitle {
-      font-size: 25px;
-      margin-bottom: 20px;
-      color: #795548;
-      font-weight: bold;
-    }
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const votesRef = ref(database, 'votes');
 
-    /* 主体样式 */
-    .main {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 40px;
-      background-color: rgba(255, 255, 255, 0.8);
-      border-radius: 10px;
-      position: relative;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
+        // 选项详细信息
+        const nameInfo = { /* 用户提供的info对象内容 */ };
 
-    .name-option {
-      margin-bottom: 30px;
-      padding: 20px;
-      border: 1px solid #bcaaa4;
-      border-radius: 10px;
-      transition: all 0.3s ease;
-      position: relative;
-      background-color: rgba(255, 255, 255, 0.9);
-      display: flex;
-      align-items: flex-start;
-      flex-wrap: wrap;
-    }
+        // 初始化界面
+        function initVoting() {
+            renderOptions();
+            setupEventListeners();
+            setupRealTimeUpdates();
+        }
 
-    .name-option:hover {
-      transform: scale(1.02);
-      background-color: rgba(245, 240, 235, 0.8);
-    }
+        // 渲染选项列表
+        function renderOptions() {
+            const container = document.getElementById('optionsContainer');
+            Object.keys(nameInfo).forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'option-item';
+                div.innerHTML = `
+                    <input type="checkbox" id="${name}" value="${name}">
+                    <label for="${name}" onclick="showDetails('${name}')">${name}</label>
+                `;
+                container.appendChild(div);
+            });
+        }
 
-    input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      border: 2px solid #795548;
-      border-radius: 4px;
-      margin-right: 20px;
-      cursor: pointer;
-      position: relative;
-    }
+        // 显示详细信息
+        window.showDetails = function(name) {
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalContent');
+            const info = nameInfo[name];
+            
+            content.innerHTML = `
+                <h2>${name}</h2>
+                ${Object.entries(info).map(([key, value]) => `
+                    <div class="detail-section">
+                        <h3>${key}</h3>
+                        <p>${value}</p>
+                    </div>
+                `).join('')}
+            `;
+            modal.style.display = 'block';
+        }
 
-    input[type="checkbox"]::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #795548;
-    }
+        // 关闭模态框
+        window.closeModal = function() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
 
-    input[type="checkbox"]:checked::after {
-      content: '\f00c';
-      font-family: 'Font Awesome 6 Free';
-      font-weight: 900;
-    }
+        // 事件监听
+        function setupEventListeners() {
+            document.getElementById('submitBtn').addEventListener('click', submitVote);
+            
+            // 限制选择数量
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const selected = document.querySelectorAll('input:checked');
+                    if(selected.length > 3) {
+                        checkbox.checked = false;
+                        alert('最多选择3个选项');
+                    }
+                });
+            });
+        }
 
-    label {
-      font-size: 28px;
-      color: #5d4037;
-      font-weight: bold;
-      margin-right: 20px;
-    }
+        // 实时更新
+        function setupRealTimeUpdates() {
+            onValue(votesRef, (snapshot) => {
+                const data = snapshot.val() || {};
+                updateResults(data);
+            });
+        }
 
-    p {
-      font-size: 16px;
-      color: #6d4c41;
-      margin-top: 10px;
-    }
+        // 更新结果展示
+        function updateResults(data) {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = Object.entries(data)
+                .sort((a, b) => b[1] - a[1])
+                .map(([name, votes]) => `
+                    <div class="result-item">
+                        <span>${name}</span>
+                        <progress value="${votes}" max="100"></progress>
+                        <span>${votes} 票</span>
+                    </div>
+                `).join('');
+        }
 
-    /* 优化投票按钮样式 */
-    button {
-      display: block;
-      margin: 40px auto 0;
-      padding: 20px 40px;
-      background-color: #ff6b6b;
-      color: #fff;
-      font-size: 32px;
-      font-weight: bold;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
-    }
+        // 提交投票
+        async function submitVote() {
+            const selected = [...document.querySelectorAll('input:checked')]
+                .map(checkbox => checkbox.value);
+            
+            if(selected.length !== 3) {
+                alert('请选择3个选项');
+                return;
+            }
 
-    button:hover {
-      transform: scale(1.1);
-      background-color: #ff4757;
-      box-shadow: 0 8px 20px rgba(255, 107, 107, 0.5);
-    }
+            try {
+                await Promise.all(selected.map(name => 
+                    runTransaction(ref(database, `votes/${name}`), (count) => (count || 0) + 1)
+                ));
+                alert('投票成功！');
+            } catch (error) {
+                console.error('投票失败:', error);
+                alert('投票失败，请稍后重试');
+            }
+        }
 
-    /* 结果部分样式 */
-    #resultSection {
-      margin-top: 40px;
-      background-color: rgba(255, 255, 255, 0.8);
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .section-title {
-      font-size: 28px;
-      color: #795548;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
-
-    #barChart {
-      display: flex;
-      justify-content: space-around;
-      align-items: flex-end;
-      height: 300px;
-      margin-top: 20px;
-      padding: 0 20px;
-    }
-
-    .bar {
-      width: 8%;
-      background-color: #795548;
-      border-radius: 5px 5px 0 0;
-      position: relative;
-      transition: all 0.3s ease;
-    }
-
-    .bar:hover {
-      transform: scaleY(1.05);
-    }
-
-    /* 调整投票结果名字显示 */
-   .bar-label {
-      position: absolute;
-      bottom: -35px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 12px;
-      text-align: center;
-      white-space: normal;
-      overflow: visible;
-      width: 100%;
-    }
-
-   .bar-value {
-      position: absolute;
-      top: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 14px;
-    }
-
-    /* 信息部分样式 */
-    .info-section {
-      margin-top: 20px;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .info-section div {
-      padding: 10px;
-      border: 1px solid #bcaaa4;
-      border-radius: 5px;
-      background-color: rgba(255, 255, 255, 0.8);
-    }
-
-    .info-title {
-      font-size: 18px;
-      color: #795548;
-      margin-bottom: 5px;
-      font-weight: bold;
-    }
- 
-    // Firebase 配置
-    const firebaseConfig = {
-      apiKey: "AIzaSyBXU75YJBs5iV8RBncXZ0Q0Be4nKGMJVYI",
-      authDomain: "yuyuan-vote.firebaseapp.com",
-      databaseURL: "https://yuyuan-vote-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "yuyuan-vote",
-      storageBucket: "yuyuan-vote.firebasestorage.app",
-      messagingSenderId: "16803060355",
-      appId: "1:16803060355:web:ca4f659f04b72a9cda59b6"
-    };
-
-    // 初始化 Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-
-    const names = ['金墨竹', '金徽雪', '金徽宁', '金安然', '金逸宁', '金照卿', '金砚晴', '金灵逍', '金灵毓', '金乐筠'];
-    let selectedNames = [];
-    let musicPlaying = false;
-    const music = new Audio('https://files.freemusicarchive.org/storage-freemusicarchive-org/music/no_curator/CHAD_Crouch/Time_Machine/CHAD_Crouch_-_01_-_Ancient_Future.mp3');
-    music.loop = true;
-
-    const info = {
-      '金墨竹': {
-        '字意解析': '墨：《说文》载 “书墨也”，由松烟制成，代表文采学识（属土，土主信、稳重）。竹：依《尔雅》“冬生草”，中空有节，寓意高洁虚心（属木，木主仁、贵显）。',
-        '文化溯源': '文同绘《墨竹图》题诗 “拟将一段鹅溪绢，扫取寒梢万尺长”，尽显君子风姿；郑燮《竹石》“咬定青山不放松” 赞竹坚韧，苏轼 “诗画本一律” 道墨竹神韵，尽显墨竹高雅。',
-        '美好内涵': '期望她如宣纸墨竹，墨韵沉淀知识，竹节支撑风骨，叶摇清韵，既有文人雅致，又具草木朝气，人生满是诗意。',
-        '五行精义': '墨（土）生竹（木），土为根基，滋养木生长，象征才学深厚、品格端直，得贵人助，节节高升，贵显不骄。'
-      },
-      '金徽雪': {
-        '字意解析': '徽：《尔雅》释 “徽，美也”，为美好标识（属金，金主贵、刚健）。雪：据《说文》“冰雨说物者”，冰晶纯净（属水，水主智、灵动）。',
-        '文化溯源': '李之仪《千秋岁・咏琴》云 “金徽泛处，漏声犹滴”，琴徽映雪，韵意幽远；岑参笔下 “忽如一夜春风来” 绘雪壮美，卢纶诗 “雪满山中高士卧” 显雪孤高，雪徽相衬，高洁不凡。',
-        '美好内涵': '宛如金徽雪光，徽是琴徽精致，雪为天地洁白，望她眸含雪澈，心怀徽耀，如寒梅映雪般清冷高贵，似玉徽照月般优雅自在，一生纯净无瑕。',
-        '五行精义': '徽（金）生水（雪），金使水清澈，主聪慧贵气，寓意天资颖慧、贵气内蕴，得贵人相帮，福泽悠长。'
-      },
-      '金徽宁': {
-        '字意解析': '徽：意同前，表美好出众（属金）。宁：《尔雅》解 “宁，安也”，含安定平和意（属火，火主贵气、光明）。',
-        '文化溯源': '《诗经・小雅》“丧乱既平，既安且宁”，祈愿安宁；陶渊明《归园田居》“户庭无尘杂，虚室有余闲”，述内心安宁；韦应物 “宁知草间人，腰下有龙泉”，展淡泊坚韧，尽显 “徽宁” 意蕴。',
-        '美好内涵': '“徽” 显外在风采，“宁” 守内心安宁。盼她如徽音清亮出众，像宁日静谧从容，于喧嚣守静，在繁华守真，恰似明月松间照，一生徽光闪耀，内心安宁。',
-        '五行精义': '徽（金）生火（宁），火映金辉，主贵人助、家庭和，寓意贵显不躁，安暖常伴。'
-      },
-      '金安然': {
-        '字意解析': '安：《说文》讲 “静也”，宀下有女，寓平安顺遂（属土，土主稳、根基）。然：《玉篇》称 “如此”，含通达自然意（属火，火主礼、贵显）。',
-        '文化溯源': '《论语》“仁者安仁，知者利仁”，点明心安为仁基；陶渊明 “久在樊笼里，复得返自然”，绘自在之态；苏轼 “回首向来萧瑟处，归去，也无风雨也无晴”，含安然豁达，尽显安然境界。',
-        '美好内涵': '“安” 是家人围坐的温馨，“然” 是水穷云起的豁达。愿她如春山安卧般静好，如秋风飒然般清朗，岁月里安守本心，顺应自然，心怀丘壑，眼含温柔。',
-        '五行精义': '安（土）生火（然），土育火燃，主根基稳、前路明，象征贵人运强，一生平安顺遂。'
-      },
-      '金逸宁': {
-        '字意解析': '逸：《说文》“失也，从辵兔”，有超脱自在、安乐意（属土，土主稳、包容）。宁：同前，表安定平和（属火，火主贵气、光明）。',
-        '文化溯源': '陶渊明《归去来兮辞》“策扶老以流憩，时矫首而遐观”，逸趣悠然；《诗经・大雅》“民之质矣，日用饮食，群黎百姓，遍为尔德”，含社稷安宁愿；庄子《逍遥游》“夫列子御风而行，泠然善也”，显逸宁之态。',
-        '美好内涵': '“逸” 是东篱采菊的悠然，“宁” 是灯火可亲的安稳。望她似逸云自在，如宁月清幽，不为俗务所困，不被变迁惊扰，逸享人生，坚守初心，安宁常伴。',
-        '五行精义': '逸（土）生火（宁），土厚火明，主安稳贵显，寓意稳如泰山、心怀光明，得贵人助，舒逸顺遂。'
-      },
-      '金照卿': {
-        '字意解析': '照：《说文》“明也”，从火，意喻智慧光明（属火，火主礼、光明）。卿：《尔雅》“卿，君也”，尊称贤能，饱含温婉贵气（属木，木主仁、贵显）。',
-        '文化溯源': '苏轼 “一点浩然气，千里快哉风”，照如心灯破雾；《诗经・卫风》“硕人其颀，公侯之卿”，卿为才德兼备之范；李白 “永结无情游，相期邈云汉”，卿含知己深情，照卿相辉，熠熠生辉。',
-        '美好内涵': '“照” 若朝晖耀空，“卿” 似佳人临水。祈愿她目光含星，心怀暖光，凭智慧照亮前路，以温柔待人处世，如晨光照亮青空般璀璨，似春风拂过般和煦，一生温润而贵显。',
-        '五行精义': '照（火）生卿（木），火燃
+        // 启动系统
+        initVoting();
+    </script>
+</body>
+</html>
